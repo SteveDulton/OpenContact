@@ -10,10 +10,13 @@ namespace RssFeedConsoleApp
 {
     internal class Program
     {
+        private static List<RSSfeedModel.Feed> interfaxArticles;
+        private static List<RSSfeedModel.Feed> habrArticles;
+
         /// <summary>
         /// Метод обработки xml-документа: http://www.realcoding.net/article/view/4649
         /// </summary>
-        private static List<RSSfeedModel.Feed> GetNewArticles(string fileSource, RSSfeedModel.RssSource channel)
+        private static List<RSSfeedModel.Feed> ReadRssFeeds(string fileSource, RSSfeedModel.RssSource channel)
         {
             // Сюда будут добавляться новости по мере их поступления.
             List<RSSfeedModel.Feed> rssItems = new List<RSSfeedModel.Feed>();
@@ -77,7 +80,11 @@ namespace RssFeedConsoleApp
                                 }
                             }
                             // Т.к. заголовок является уникальным идентификатором => он не может быть пустым!
-                            if (!string.IsNullOrWhiteSpace(feed.Title)) rssItems.Add(feed);
+                            if (!string.IsNullOrWhiteSpace(feed.Title))
+                            {
+                                feed.RssSource = channel;
+                                rssItems.Add(feed);
+                            }
                         }
                     }
                 }
@@ -88,22 +95,131 @@ namespace RssFeedConsoleApp
             }
             return rssItems;
         }
+        /// <summary>
+        /// ConsoleAction - Read. Читает RSS-ленты из заданных источников
+        /// </summary>
+        private static int Read()
+        {
+            try { interfaxArticles = ReadRssFeeds(@"http://www.interfax.by/news/feed​", new RSSfeedModel.RssSource()); }
+            catch (Exception ex) { throw new Exception("\r\nОшибка чтения interfax.by\r\n", ex); }
+
+            try { habrArticles = ReadRssFeeds(@"https://habr.com/rss/interesting/", new RSSfeedModel.RssSource()); }
+            catch (Exception ex) { throw new Exception("\r\nОшибка чтения habr.com\r\n", ex); }
+
+            return interfaxArticles.Count + habrArticles.Count;
+        }
+        /// <summary>
+        /// ConsoleAction - Info. Сохраняет свежие новости в БД
+        /// </summary>
+        /// <returns>Количество добавленных новостей</returns>
+        private static int Update()
+        {
+            int feedsAdded = 0;
+            try
+            {
+                using (RSSfeedModel.RssDBContext db = new RSSfeedModel.RssDBContext())
+                {
+                    var newFeedsFromInterfax = db.Feeds.Except(interfaxArticles);
+                    db.Feeds.AddRange(newFeedsFromInterfax);
+                    feedsAdded = newFeedsFromInterfax.Count();
+                    db.SaveChanges();
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Не удалось добавить новости с interfax.by\r\n", ex);
+            }
+            try
+            {
+                using (RSSfeedModel.RssDBContext db = new RSSfeedModel.RssDBContext())
+                {
+                    var newFeedsFromHabr = db.Feeds.Except(interfaxArticles);
+                    db.Feeds.AddRange(interfaxArticles);
+                    feedsAdded += newFeedsFromHabr.Count();
+                    db.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+
+                throw new Exception("Не удалось добавить новости с interfax.by\r\n", ex);
+            }
+
+            return feedsAdded;
+        }
 
         private static void Main(string[] args)
         {
-            string parseFormat = "ddd, dd MMM yyyy HH:mm:ss zzz";
-            DateTime date = DateTime.ParseExact("", parseFormat, CultureInfo.InvariantCulture);
-
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\t\t####### HELLO #######");
+            Console.WriteLine("\t\t####### HELLO #######\r\n\n");
             Console.ForegroundColor = ConsoleColor.Gray;
 
+            int newsRead = 0;
+            int newsAdded = 0;
 
-            RSSfeedModel.RssSource interfaxChannel = new RSSfeedModel.RssSource();
-            List<RSSfeedModel.Feed> interfaxArticles = GetNewArticles(@"http://www.interfax.by/news/feed​", interfaxChannel);
+            while (true)
+            {
+                string action = Console.ReadLine().ToLower();
+                switch (action)
+                {
+                    case "read":
+                    try
+                    {
+                        newsRead = Read();
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("Прочитано новостей: " + newsRead);
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine(ex.Message);
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
+                    break;
 
-            RSSfeedModel.RssSource habrChannel = new RSSfeedModel.RssSource();
-            List<RSSfeedModel.Feed> habrArticles = GetNewArticles(@"https://habr.com/rss/interesting/", habrChannel);
+                    case "update":
+                    try
+                    {
+                        newsAdded = Update();
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("Новостей добавлено: {0}", newsAdded);
+                        Console.ForegroundColor = ConsoleColor.Gray;
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine(ex.Message);
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
+                    break;
+
+                    case "info":
+                    Console.WriteLine("Всего прочитано: {0}\r\nДобавлено: {1}", newsRead, newsAdded);
+                    break;
+
+                    // Вывод существующих команд.
+                    case "help":
+                    Console.WriteLine("\r\nList of commands:\r\n");
+                    Console.ForegroundColor = ConsoleColor.DarkBlue;
+                    Console.WriteLine("read");
+                    Console.WriteLine("update");
+                    Console.WriteLine("info");
+                    Console.WriteLine("exit");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    break;
+
+                    default:
+                    Console.ForegroundColor = ConsoleColor.DarkRed; Console.WriteLine("#Undefined action\r\n");
+                    Console.ForegroundColor = ConsoleColor.Gray; Console.WriteLine("Введите \"");
+                    Console.ForegroundColor = ConsoleColor.DarkBlue; Console.WriteLine("exit");
+                    Console.ForegroundColor = ConsoleColor.Gray; Console.WriteLine("\"- если хотите завершить работу\n");
+                    break;
+                }
+            }
 
         }
     }
