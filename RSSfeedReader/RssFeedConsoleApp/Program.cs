@@ -45,12 +45,10 @@ namespace RssFeedConsoleApp
                         // Заполнение "RSS-источника":
                         // Название
                         if (chanel_item.Name == "title")
-                        { channel.TitleRss = chanel_item.InnerText; }
-
+                        { channel.TitleRss = chanel_item.InnerText; } else
                         // URL
                         if (chanel_item.Name == "link")
-                        { channel.Url = chanel_item.InnerText; }
-
+                        { channel.Url = chanel_item.InnerText; } else
                         // Сама новость.
                         if (chanel_item.Name == "item")
                         {
@@ -73,8 +71,12 @@ namespace RssFeedConsoleApp
                                     try
                                     {
                                         // Если это дата, то произойдёт приведение к типу DateTime
-                                        feed.PubDate = DateTime.
-                                            ParseExact(item.InnerText, "ddd, dd MMM yyyy HH:mm:ss zzz", CultureInfo.InvariantCulture);
+                                        DateTimeOffset d = DateTimeOffset.ParseExact(item.InnerText, "ddd, dd MMM yyyy HH:mm:ss zzz",
+                                           CultureInfo.InvariantCulture, DateTimeStyles.None);
+                                        var f = d.DateTime;
+                                        feed.PubDate = f;
+
+
                                     }
                                     catch (FormatException fEx) { throw new Exception("Не удалось преобразовать дату в: \"" + feed.Title + "\"\r\n", fEx); }
                                 }
@@ -88,7 +90,19 @@ namespace RssFeedConsoleApp
                         }
                     }
                 }
-            }
+            }/*
+            
+
+DateTime.Parse не понимает EST. Он только понимает GMT в конце строки.
+
+Стандартная форма даты и времени Строки Ссылка: http://msdn.microsoft.com/en-us/library/az4se3k1.aspx
+
+Здесь ссылка SO, чтобы помочь... EST и т.д. не распознаются. Вам придется преобразовать их во временные смещения:
+
+Параметр DateTime с часовым поясом формы PST/CEST/UTC/etc
+5
+
+             */
             catch (Exception ex)
             {
                 throw new Exception("Ошибка в получении RSS-ленты\r\n", ex);
@@ -99,10 +113,10 @@ namespace RssFeedConsoleApp
         /// ConsoleAction - Read. Читает RSS-ленты из заданных источников
         /// </summary>
         private static int Read()
-        {
+        {/*
             try { interfaxArticles = ReadRssFeeds(@"http://www.interfax.by/news/feed​", new RSSfeedModel.RssSource()); }
             catch (Exception ex) { throw new Exception("\r\nОшибка чтения interfax.by\r\n", ex); }
-
+            */
             try { habrArticles = ReadRssFeeds(@"https://habr.com/rss/interesting/", new RSSfeedModel.RssSource()); }
             catch (Exception ex) { throw new Exception("\r\nОшибка чтения habr.com\r\n", ex); }
 
@@ -153,7 +167,7 @@ namespace RssFeedConsoleApp
         private static void Main(string[] args)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\t\t####### HELLO #######\r\n\n");
+            Console.WriteLine("\t\t####### HELLO #######\r\n");
             Console.ForegroundColor = ConsoleColor.Gray;
 
             int newsRead = 0;
@@ -212,10 +226,13 @@ namespace RssFeedConsoleApp
                     Console.ForegroundColor = ConsoleColor.Gray;
                     break;
 
+                    case "exit":
+                    return;
+
                     default:
                     Console.ForegroundColor = ConsoleColor.DarkRed; Console.WriteLine("#Undefined action\r\n");
-                    Console.ForegroundColor = ConsoleColor.Gray; Console.WriteLine("Введите \"");
-                    Console.ForegroundColor = ConsoleColor.DarkBlue; Console.WriteLine("exit");
+                    Console.ForegroundColor = ConsoleColor.Gray; Console.Write("Введите \"");
+                    Console.ForegroundColor = ConsoleColor.DarkBlue; Console.Write("exit");
                     Console.ForegroundColor = ConsoleColor.Gray; Console.WriteLine("\"- если хотите завершить работу\n");
                     break;
                 }
