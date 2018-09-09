@@ -11,7 +11,7 @@ namespace RSSfeedModel
         public int Id { get; set; }
 
         public string Url { get; set; }
-        public string NameRss { get; set; }
+        public string TitleRss { get; set; }
 
         public Feed Feed { get; set; }
     }

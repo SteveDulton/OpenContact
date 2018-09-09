@@ -10,10 +10,10 @@ namespace RSSfeedModel
     {
         public int Id { get; set; }
 
-        public string FeedHeader { get; set; }
-        public DateTime PublicDate { get; set; }
-        public string FeedContent { get; set; }
-        public string Url { get; set; }
+        public string Title { get; set; }
+        public DateTime PubDate { get; set; }
+        public string Description { get; set; }
+        public string Link { get; set; }
 
         public RssSource RssSource { get; set; }
     }

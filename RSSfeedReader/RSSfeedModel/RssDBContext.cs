@@ -14,15 +14,7 @@ namespace RSSfeedModel
 
         public DbSet<Feed> Feeds { get; set; }
         public DbSet<RssSource> RssSources { get; set; }
-        /*
-         ● Заголовок новости 
-         ● Дата публикации новости 
-         ● Описание новости 
-         ● URL новости 
-         ● RSS-источник 
-            o URL 
-            o Название  
-         */
+
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             // Связь один к одному между Новостью и источником новости,
